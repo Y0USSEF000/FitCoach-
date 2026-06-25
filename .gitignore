@@ -1,0 +1,26 @@
+# ── Secrets / user data (NEVER commit) ──
+backend/appsettings.json
+backend/appsettings.Development.json
+backend/accounts.json
+backend/users.json
+**/.env
+**/*.local
+
+# ── .NET build output ──
+backend/bin/
+backend/obj/
+
+# ── Node / Expo ──
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+*.log
+mobile/.expo-export-test/
+
+# ── OS / editor ──
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+.idea/
