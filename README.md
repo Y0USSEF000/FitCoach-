@@ -80,3 +80,4 @@ cd mobile && npm install && npx expo start --lan
 - The Telegram-specific layer (commands, keyboards, polling) is replaced by the mobile UI;
   all the **business logic** (macros, BMI, Gemini prompts, meal/undo, fallbacks) lives in the C# backend.
 - The `GEMINI_API_KEY` stays server-side — the app never holds it.
+"# FitCoach-" 
