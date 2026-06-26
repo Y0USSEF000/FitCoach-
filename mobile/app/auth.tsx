@@ -19,7 +19,13 @@ export default function Auth() {
     setBusy(true);
     try {
       const res = await api.authStart(e);
-      router.push({ pathname: "/verify", params: { email: e, exists: res.exists ? "1" : "0", devCode: res.devCode ?? "" } });
+      const go = () => router.push({ pathname: "/verify", params: { email: e, exists: res.exists ? "1" : "0", devCode: res.devCode ?? "" } });
+      if (res.exists) {
+        // Email already has an account → tell the user, then continue to log in.
+        Alert.alert(t(lang, "welcome_back_title"), t(lang, "welcome_back_msg"), [{ text: t(lang, "log_in"), onPress: go }]);
+      } else {
+        go();
+      }
     } catch {
       Alert.alert("⚠️", "Could not reach the server. Is the backend running?");
     } finally {

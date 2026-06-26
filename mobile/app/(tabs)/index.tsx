@@ -27,7 +27,8 @@ export default function Dashboard() {
   const [bmi, setBmi] = useState<number | null>(null);
   const [bmiCat, setBmiCat] = useState("");
   const [streak, setStreak] = useState(0);
-  const [totalMeals, setTotalMeals] = useState(0);
+  const [daysActive, setDaysActive] = useState(0);
+  const [photoCount, setPhotoCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
 
@@ -41,7 +42,8 @@ export default function Dashboard() {
         setBmiCat(me.bmiCategory ?? "");
         const days = me.user.days ?? {};
         setStreak(computeStreak(days));
-        setTotalMeals(Object.values(days).reduce((n: number, d: any) => n + (d.meals?.length ?? 0), 0));
+        setDaysActive(me.stats?.daysActive ?? 0);
+        setPhotoCount(me.stats?.photoCount ?? 0);
         nudgeIfNotEaten(lang, me.today?.meals?.length ?? 0);
       }
     } catch {}
@@ -130,7 +132,8 @@ export default function Dashboard() {
             </View>
             <View style={s.tags}>
               <Tag light icon="🔥" label={`${streak} ${t(lang, "streak")}`} />
-              <Tag light icon="🍽️" label={`${totalMeals} ${t(lang, "logged")}`} />
+              <Tag light icon="📅" label={`${daysActive} ${t(lang, "days_active")}`} />
+              <Tag light icon="📸" label={`${photoCount} ${t(lang, "scans")}`} />
             </View>
           </GradientBanner>
         </Entrance>
@@ -222,7 +225,7 @@ const s = StyleSheet.create({
 
   brand: { color: "rgba(255,255,255,0.55)", fontSize: FONT.h1, fontWeight: "900", letterSpacing: -1 },
   greeting: { color: "rgba(255,255,255,0.75)", fontSize: FONT.small, fontWeight: "700", marginTop: 4 },
-  tags: { flexDirection: "row", gap: 8, marginTop: SPACING.lg },
+  tags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: SPACING.lg },
 
   ringCard: { alignItems: "center", paddingVertical: SPACING.xxl },
   statsRow: { flexDirection: "row", alignItems: "center", marginTop: SPACING.xl, alignSelf: "stretch" },

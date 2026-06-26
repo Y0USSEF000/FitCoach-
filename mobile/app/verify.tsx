@@ -13,6 +13,7 @@ export default function Verify() {
   const { signIn } = useApp();
   const params = useLocalSearchParams<{ email: string; exists: string; devCode: string }>();
   const email = String(params.email ?? "");
+  const exists = params.exists === "1";
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [devCode, setDevCode] = useState(String(params.devCode ?? ""));
@@ -45,8 +46,8 @@ export default function Verify() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <TopBar progress={0.66} onBack={() => router.back()} />
         <View style={s.body}>
-          <SpeechBubble pose="flex">{`${t(lang, "verify_sub")}\n${email}`}</SpeechBubble>
-          <Text style={s.title}>{t(lang, "verify_title")}</Text>
+          <SpeechBubble pose="flex">{`${exists ? t(lang, "welcome_back_msg") : t(lang, "new_acc_msg")}\n\n${t(lang, "verify_sub")} ${email}`}</SpeechBubble>
+          <Text style={s.title}>{exists ? t(lang, "welcome_back_title") : t(lang, "verify_title")}</Text>
 
           <TextInput
             style={s.input}

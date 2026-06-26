@@ -1,45 +1,49 @@
-{
-  "expo": {
-    "name": "FitWolf",
-    "slug": "fitwolf-coach",
-    "version": "1.0.0",
-    "scheme": "fitwolf",
-    "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "icon": "./assets/wolf/wolf-logo.png",
-    "splash": {
-      "image": "./assets/wolf/splash.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#0c0818"
-    },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.fitwolf.coach"
-    },
-    "android": {
-      "package": "com.fitwolf.coach",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/wolf/wolf-logo.png",
-        "backgroundColor": "#0c0818"
-      }
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-image-picker",
-        { "photosPermission": "fitWolf uses your photos to analyze meals and track nutrition." }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/wolf/wolf-logo.png",
-          "color": "#a855f7"
-        }
-      ]
-    ],
-    "extra": {
-      "apiUrl": "http://192.168.1.109:5000",
-      "eas": { "projectId": "fitwolf-coach" }
-    }
-  }
+﻿{
+    "expo":  {
+                 "name":  "FitWolf",
+                 "slug":  "fitwolf-coach",
+                 "version":  "1.0.0",
+                 "scheme":  "fitwolf",
+                 "orientation":  "portrait",
+                 "userInterfaceStyle":  "dark",
+                 "icon":  "./assets/wolf/wolf-logo.png",
+                 "splash":  {
+                                "image":  "./assets/wolf/splash.png",
+                                "resizeMode":  "cover",
+                                "backgroundColor":  "#0c0818"
+                            },
+                 "ios":  {
+                             "supportsTablet":  false,
+                             "bundleIdentifier":  "com.fitwolf.coach"
+                         },
+                 "android":  {
+                                 "package":  "com.fitwolf.coach",
+                                 "adaptiveIcon":  {
+                                                      "foregroundImage":  "./assets/wolf/wolf-logo.png",
+                                                      "backgroundColor":  "#0c0818"
+                                                  }
+                             },
+                 "plugins":  [
+                                 "expo-router",
+                                 [
+                                     "expo-image-picker",
+                                     {
+                                         "photosPermission":  "fitWolf uses your photos to analyze meals and track nutrition."
+                                     }
+                                 ],
+                                 [
+                                     "expo-notifications",
+                                     {
+                                         "icon":  "./assets/wolf/wolf-logo.png",
+                                         "color":  "#a855f7"
+                                     }
+                                 ]
+                             ],
+                 "extra":  {
+                               "apiUrl":  "http://192.168.0.100:5000",
+                               "eas":  {
+                                           "projectId":  "fitwolf-coach"
+                                       }
+                           }
+             }
 }

@@ -2,7 +2,11 @@
 backend/appsettings.json
 backend/appsettings.Development.json
 backend/accounts.json
+backend/accounts.json.imported
 backend/users.json
+backend/fitwolf.db
+backend/fitwolf.db-shm
+backend/fitwolf.db-wal
 **/.env
 **/*.local
 

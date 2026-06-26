@@ -67,6 +67,9 @@ app.MapPost("/api/auth/register", (RegisterRequest req, UserStore store, AuthSer
     u.PasswordHash = hash;
     u.PasswordSalt = salt;
     u.Token = auth.NewToken();
+    u.CreatedAt = DateTime.UtcNow.ToString("o");
+    var today0 = UserStore.Today();
+    if (!u.ActiveDates.Contains(today0)) u.ActiveDates.Add(today0);
     store.Set(u.Email, u);
     return Results.Ok(new { token = u.Token, profileComplete = u.ProfileComplete });
 });
@@ -104,9 +107,15 @@ app.MapGet("/api/me", (HttpRequest http, UserStore store) =>
 {
     var u = Auth(http, store);
     if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
-    if (!u.ProfileComplete) return Results.Ok(new { user = u, profileComplete = false });
+
+    // Track "days the user opened the app"
+    var today0 = UserStore.Today();
+    if (!u.ActiveDates.Contains(today0)) { u.ActiveDates.Add(today0); store.Set(u.Email, u); }
+
+    var stats = new { daysActive = u.ActiveDates.Count, photoCount = u.PhotoCount, createdAt = u.CreatedAt };
+    if (!u.ProfileComplete) return Results.Ok(new { user = u, profileComplete = false, stats });
     var (bmi, cat) = NutritionService.CalculateBmi(u.Weight, u.Height);
-    return Results.Ok(new { user = u, profileComplete = true, today = UserStore.TodayLog(u), bmi, bmiCategory = cat });
+    return Results.Ok(new { user = u, profileComplete = true, today = UserStore.TodayLog(u), bmi, bmiCategory = cat, stats });
 });
 
 app.MapGet("/api/status", (HttpRequest http, UserStore store) =>
@@ -148,6 +157,10 @@ app.MapPost("/api/analyze", async (HttpRequest http, UserStore store, GeminiServ
         Calories = r.Calories, EstimatedGrams = r.EstimatedGrams, Time = UserStore.NowTime(),
     };
     store.AddMeal(u.Email, meal);
+
+    // Count this food photo for engagement analytics
+    var fresh = store.Get(u.Email);
+    if (fresh is not null) { fresh.PhotoCount += 1; store.Set(u.Email, fresh); }
 
     var after = UserStore.TodayLog(store.Get(u.Email)!);
     return Results.Ok(new { result = r, meal, remaining = new {

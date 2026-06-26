@@ -40,6 +40,11 @@ public class User
     public bool Verified { get; set; }
     public string Token { get; set; } = "";
 
+    // ── Engagement / analytics ──
+    public string CreatedAt { get; set; } = "";          // ISO datetime account created
+    public List<string> ActiveDates { get; set; } = new(); // distinct days the user opened the app
+    public int PhotoCount { get; set; }                   // total food photos analyzed
+
     // ── Profile ──
     public string Lang { get; set; } = "en";
     public double Height { get; set; }

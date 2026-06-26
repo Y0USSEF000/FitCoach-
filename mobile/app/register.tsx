@@ -25,7 +25,10 @@ export default function Register() {
       await signIn(res.token);
       router.replace("/onboarding");   // new account → physical onboarding
     } catch (e: any) {
-      Alert.alert("⚠️", e?.message === "weak_password" ? t(lang, "err_password") : "Could not create account.");
+      const msg = e?.message === "weak_password" ? t(lang, "err_password")
+        : e?.message === "already_registered" ? t(lang, "welcome_back_msg")
+        : "Could not create account.";
+      Alert.alert("⚠️", msg);
     } finally {
       setBusy(false);
     }
