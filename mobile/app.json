@@ -59,7 +59,7 @@
       ]
     ],
     "extra": {
-      "apiUrl": "http://192.168.0.100:5000",
+      "apiUrl": "https://fitwolf-j7bt1v68.b4a.run",
       "router": {},
       "eas": {
         "projectId": "d683db05-c540-443c-8183-f0e62759d223"

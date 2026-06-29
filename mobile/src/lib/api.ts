@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = (Constants.expoConfig?.extra as any)?.apiUrl ?? "http://192.168.0.100:5000";
+const API_URL = (Constants.expoConfig?.extra as any)?.apiUrl ?? "https://fitwolf-j7bt1v68.b4a.run";
 
 // ─── Auth token ─────────────────────────────────────────
 let cachedToken: string | null = null;
