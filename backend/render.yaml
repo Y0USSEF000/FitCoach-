@@ -3,9 +3,26 @@ services:
     name: fitwolf-backend
     runtime: docker
     plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
     envVars:
+      # ── Secrets: set these in the Render dashboard (sync:false = not stored in git) ──
       - key: GEMINI_API_KEY
         sync: false
+      - key: Smtp__Host
+        sync: false
+      - key: Smtp__Port
+        value: "587"
+      - key: Smtp__User
+        sync: false
+      - key: Smtp__Pass
+        sync: false
+      - key: Smtp__From
+        sync: false
+      - key: Smtp__FromName
+        value: FitWolf
+      # ── Runtime config ──
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT

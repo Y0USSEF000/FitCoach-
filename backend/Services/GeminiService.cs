@@ -149,7 +149,7 @@ public class GeminiService
     {
         var t = u.Targets!;
         var prompt =
-            $"You are YSF Coach, a nutritionist. Write in {LangName(lang)} only.\n" +
+            $"You are FitWolf, a nutritionist. Write in {LangName(lang)} only.\n" +
             "Create a 1-day sample meal plan for:\n" +
             $"Goal: {u.Goal} | {t.Calories} kcal | Protein: {t.Protein}g | Carbs: {t.Carbs}g | Fat: {t.Fat}g\n\n" +
             $"Use this format (translate to {LangName(lang)}):\n" +
@@ -167,7 +167,7 @@ public class GeminiService
     {
         var t = u.Targets!;
         var prompt =
-            $"You are YSF Coach, a professional nutrition coach. Respond in {LangName(lang)}.\n" +
+            $"You are FitWolf, a professional nutrition coach. Respond in {LangName(lang)}.\n" +
             $"Client: {u.Age}yo, {u.Height}cm, {u.Weight}kg, activity: {u.Activity}, goal: {u.Goal}.\n" +
             $"Targets: {t.Calories} kcal, {t.Protein}g protein, {t.Carbs}g carbs, {t.Fat}g fat.\n" +
             $"Write exactly 2 sentences in {LangName(lang)}: why these targets fit the goal, " +

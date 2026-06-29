@@ -75,6 +75,23 @@ public record OnboardRequest(
     string Lang, double Height, double Weight, int Age,
     string Gender, string Activity, string Goal);
 
+// A food from the database / barcode (macros per 100 g).
+public class FoodItem
+{
+    public string Name { get; set; } = "";
+    public string Brand { get; set; } = "";
+    public string Barcode { get; set; } = "";
+    public double Calories { get; set; }   // per 100 g
+    public double Protein { get; set; }
+    public double Carbs { get; set; }
+    public double Fat { get; set; }
+    public double? ServingGrams { get; set; } // optional default serving
+}
+
+// Manual / confirmed meal log (final values the user approved).
+public record LogMealRequest(
+    string Food, double Grams, double Calories, double Protein, double Carbs, double Fat);
+
 // Auth DTOs
 public record AuthStartRequest(string Email);
 public record AuthVerifyRequest(string Email, string Code);

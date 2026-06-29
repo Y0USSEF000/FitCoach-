@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, Animated } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useApp } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { api, Targets, DayLog } from "@/lib/api";
-import { Card, MacroBar, Ring, Stat, Screen, GradientBanner, Tag, Entrance, LogButton } from "@/lib/ui";
+import { Card, MacroBar, Ring, Stat, Screen, GradientBanner, Tag, Entrance, LogButton, DuoButton } from "@/lib/ui";
 import { Mascot } from "@/lib/mascot";
 import { macroColors, macroGlows, C, SPACING, FONT, RADIUS, glow } from "@/lib/theme";
 import { nudgeIfNotEaten } from "@/lib/notifications";
@@ -22,6 +22,7 @@ function computeStreak(days: Record<string, any>): number {
 
 export default function Dashboard() {
   const { lang } = useApp();
+  const router = useRouter();
   const [targets, setTargets] = useState<Targets | null>(null);
   const [today, setToday] = useState<DayLog | null>(null);
   const [bmi, setBmi] = useState<number | null>(null);
@@ -61,23 +62,18 @@ export default function Dashboard() {
     try {
       const photo = asset.assets[0];
       const mimeType = photo.mimeType ?? "image/jpeg";
-      const out = await api.analyze(photo.uri, mimeType);
-      const m = out.meal;
+      // Preview only — AI estimates, user confirms & edits the portion before saving.
+      const out = await api.analyze(photo.uri, mimeType, false);
       const r = out.result;
-      const extras = [
-        r.fiber > 0 ? `🌾 Fiber: ${r.fiber}g` : null,
-        r.sugar > 0 ? `🍬 Sugar: ${r.sugar}g` : null,
-        r.sodium > 0 ? `🧂 Sodium: ${r.sodium}mg` : null,
-        r.ingredients_detected ? `\n🔍 ${r.ingredients_detected}` : null,
-      ].filter(Boolean).join("   ");
-      const body =
-        `~${m.estimatedGrams}g\n\n` +
-        `🔥 ${Math.round(m.calories)} kcal\n` +
-        `🥩 ${m.protein}g protein   🍚 ${m.carbs}g carbs   🥑 ${m.fat}g fat\n` +
-        (extras ? `${extras}\n` : "") +
-        (r.coach_message ? `\n💬 ${r.coach_message}` : "");
-      Alert.alert(`🍽️  ${m.food}`, body);
-      await load();
+      router.push({ pathname: "/confirm-meal", params: {
+        food: r.food_name ?? "Food",
+        basis: String(r.estimated_grams || 100),
+        calories: String(r.calories || 0),
+        protein: String(r.protein || 0),
+        carbs: String(r.carbs || 0),
+        fat: String(r.fat || 0),
+        source: out.source ?? "ai",
+      }});
     } catch (err: any) {
       const detail = err?.message ?? "";
       const msg = detail.includes("404") || detail.includes("no_profile")
@@ -203,6 +199,9 @@ export default function Dashboard() {
             onPress={logMeal}
             loading={analyzing}
           />
+        </Entrance>
+        <Entrance delay={360}>
+          <DuoButton color="white" icon="🔍" label={t(lang, "add_food_title")} onPress={() => router.push("/add-food")} style={{ marginTop: SPACING.md }} />
         </Entrance>
       </ScrollView>
     </Screen>

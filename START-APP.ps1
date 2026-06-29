@@ -1,5 +1,5 @@
 # ============================================================
-#  YSF Coach — One-Click Launcher
+#  FitWolf — One-Click Launcher
 #  Run this script every time to start the app
 # ============================================================
 
@@ -8,13 +8,9 @@ $back   = "$root\backend"
 $mobile = "$root\mobile"
 
 Write-Host ""
-Write-Host "  ██╗   ██╗███████╗███████╗" -ForegroundColor Magenta
-Write-Host "  ╚██╗ ██╔╝██╔════╝██╔════╝" -ForegroundColor Magenta
-Write-Host "   ╚████╔╝ ███████╗█████╗  " -ForegroundColor Magenta
-Write-Host "    ╚██╔╝  ╚════██║██╔══╝  " -ForegroundColor Magenta
-Write-Host "     ██║   ███████║██║     " -ForegroundColor Magenta
-Write-Host "     ╚═╝   ╚══════╝╚═╝     " -ForegroundColor Magenta
-Write-Host "     YSF Coach Launcher" -ForegroundColor Cyan
+Write-Host "  ===============================" -ForegroundColor Magenta
+Write-Host "          FitWolf Launcher" -ForegroundColor Cyan
+Write-Host "  ===============================" -ForegroundColor Magenta
 Write-Host ""
 
 # ── 1. Get current WiFi IP ───────────────────────────────────

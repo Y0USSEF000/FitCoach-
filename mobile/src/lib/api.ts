@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = (Constants.expoConfig?.extra as any)?.apiUrl ?? "http://10.0.2.2:5000";
+const API_URL = (Constants.expoConfig?.extra as any)?.apiUrl ?? "http://192.168.0.100:5000";
 
 // ─── Auth token ─────────────────────────────────────────
 let cachedToken: string | null = null;
@@ -39,6 +39,7 @@ async function json(path: string, init: RequestInit = {}) {
 
 export interface Targets { calories: number; protein: number; carbs: number; fat: number; }
 export interface Meal { food: string; protein: number; carbs: number; fat: number; calories: number; time: string; estimatedGrams: number; }
+export interface FoodItem { name: string; brand: string; barcode: string; calories: number; protein: number; carbs: number; fat: number; servingGrams: number | null; }
 export interface DayLog { protein: number; carbs: number; fat: number; calories: number; meals: Meal[]; }
 export interface NotificationPrefs {
   mealReminders: boolean; waterReminders: boolean; didYouEatToday: boolean;
@@ -47,6 +48,9 @@ export interface NotificationPrefs {
 
 export const api = {
   // ── Auth ──
+  authCheck: (email: string): Promise<{ exists: boolean }> =>
+    json("/api/auth/check", { method: "POST", body: JSON.stringify({ email }) }),
+
   authStart: (email: string): Promise<{ exists: boolean; devCode: string | null }> =>
     json("/api/auth/start", { method: "POST", body: JSON.stringify({ email }) }),
 
@@ -76,11 +80,29 @@ export const api = {
 
   program: () => json("/api/program"),
 
-  analyze: (uri: string, mimeType: string = "image/jpeg") => {
+  // save=false → preview only (user confirms/edits before logging)
+  analyze: (uri: string, mimeType: string = "image/jpeg", save = true) => {
     const ext = mimeType.includes("png") ? "png" : "jpg";
     const form = new FormData();
     form.append("photo", { uri, name: `meal.${ext}`, type: mimeType } as any);
+    form.append("save", save ? "true" : "false");
     return json("/api/analyze", { method: "POST", body: form });
+  },
+
+  // Manual / confirmed meal log (from confirm screen, search, or barcode)
+  logMeal: (body: { food: string; grams: number; calories: number; protein: number; carbs: number; fat: number }) =>
+    json("/api/meals", { method: "POST", body: JSON.stringify(body) }),
+
+  recent: (): Promise<{ recent: Meal[] }> => json("/api/recent"),
+
+  searchFoods: (q: string): Promise<{ results: FoodItem[] }> =>
+    json(`/api/foods/search?q=${encodeURIComponent(q)}`),
+
+  barcodeFood: async (code: string): Promise<FoodItem | null> => {
+    const res = await req(`/api/foods/barcode/${encodeURIComponent(code)}`);
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body.item ?? null;
   },
 
   undo: () => json("/api/undo", { method: "POST" }),

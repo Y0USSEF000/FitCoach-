@@ -59,8 +59,8 @@ export default function Welcome() {
         </View>
 
         <View style={s.actions}>
-          <DuoButton label={t(lang, "get_started")} onPress={() => router.push("/auth")} />
-          <DuoButton label={t(lang, "have_account")} color="white" onPress={() => router.push("/auth")} />
+          <DuoButton label={t(lang, "get_started")} onPress={() => router.push({ pathname: "/auth", params: { mode: "signup" } })} />
+          <DuoButton label={t(lang, "have_account")} color="white" onPress={() => router.push({ pathname: "/auth", params: { mode: "login" } })} />
         </View>
       </Animated.View>
     </Screen>

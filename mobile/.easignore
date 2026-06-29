@@ -1,0 +1,24 @@
+# Dependencies (installed fresh in the cloud)
+node_modules/
+
+# Expo / build artifacts
+.expo/
+dist/
+web-build/
+android/
+ios/
+
+# Logs and local env
+*.log
+.env
+.env.*
+
+# Git / OS cruft
+.git/
+.DS_Store
+Thumbs.db
+
+# Local build outputs
+*.apk
+*.aab
+*.keystore

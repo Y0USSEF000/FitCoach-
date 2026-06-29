@@ -24,6 +24,9 @@ export default function RootLayout() {
           <Stack.Screen name="register" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="onboarding" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="(tabs)" options={{ animation: "none" }} />
+          <Stack.Screen name="add-food" options={{ animation: "slide_from_bottom" }} />
+          <Stack.Screen name="confirm-meal" options={{ animation: "slide_from_bottom" }} />
+          <Stack.Screen name="scan" options={{ animation: "slide_from_bottom" }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

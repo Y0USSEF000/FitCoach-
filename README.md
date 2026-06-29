@@ -1,4 +1,4 @@
-# YSF Coach — Mobile App
+# FitWolf — Mobile App
 
 AI nutrition coach, ported from the Telegram bot to an **Expo React Native** app
 with a **C# (ASP.NET Core)** backend.

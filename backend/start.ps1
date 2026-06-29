@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# YSF Coach — Backend launcher
+# FitWolf — Backend launcher
 # Starts the C# API on 0.0.0.0:5000 so your phone can reach it.
 # Set your Gemini key once: $env:GEMINI_API_KEY="..." (or it prompts).
 # ─────────────────────────────────────────────────────────────
@@ -12,7 +12,7 @@ if (-not $env:GEMINI_API_KEY) {
 }
 
 Write-Host ""
-Write-Host "  Starting YSF Coach API on http://0.0.0.0:5000 ..." -ForegroundColor Cyan
+Write-Host "  Starting FitWolf API on http://0.0.0.0:5000 ..." -ForegroundColor Cyan
 Write-Host ""
 
 dotnet run --urls http://0.0.0.0:5000

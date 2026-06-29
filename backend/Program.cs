@@ -7,6 +7,7 @@ builder.Services.AddSingleton<UserStore>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddHttpClient<GeminiService>(c => c.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddHttpClient<FoodService>(c => c.Timeout = TimeSpan.FromSeconds(12));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -27,6 +28,15 @@ app.MapPost("/api/auth/start", async (AuthStartRequest req, UserStore store, Aut
     await email.SendCodeAsync(req.Email, code);
     // In dev (no SMTP configured) return the code so it can be shown in-app.
     return Results.Ok(new { exists, devCode = email.IsConfigured ? null : code });
+});
+
+// 1b) Check if an email already has a (registered) account — no code sent.
+app.MapPost("/api/auth/check", (AuthStartRequest req, UserStore store) =>
+{
+    if (!AuthService.IsValidEmail(req.Email)) return Results.BadRequest(new { error = "invalid_email" });
+    var u = store.Get(req.Email);
+    bool exists = u != null && !string.IsNullOrEmpty(u.PasswordHash);
+    return Results.Ok(new { exists });
 });
 
 // 2) Verify the code. If the account is registered → log in (return token).
@@ -135,7 +145,7 @@ app.MapGet("/api/program", async (HttpRequest http, UserStore store, GeminiServi
     return Results.Ok(new { plan, coach });
 });
 
-app.MapPost("/api/analyze", async (HttpRequest http, UserStore store, GeminiService gemini) =>
+app.MapPost("/api/analyze", async (HttpRequest http, UserStore store, GeminiService gemini, FoodService food) =>
 {
     var u = Auth(http, store);
     if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
@@ -144,6 +154,8 @@ app.MapPost("/api/analyze", async (HttpRequest http, UserStore store, GeminiServ
     var form = await http.ReadFormAsync();
     var file = form.Files.GetFile("photo");
     if (file is null) return Results.BadRequest(new { error = "no_photo" });
+    // save=false → preview only (user confirms/edits before logging)
+    bool save = !string.Equals(form["save"].FirstOrDefault(), "false", StringComparison.OrdinalIgnoreCase);
 
     using var ms = new MemoryStream();
     await file.CopyToAsync(ms);
@@ -151,24 +163,106 @@ app.MapPost("/api/analyze", async (HttpRequest http, UserStore store, GeminiServ
     var eaten = UserStore.TodayLog(u);
     var r = await gemini.AnalyzeFoodAsync(ms.ToArray(), u.Targets, eaten, u.Lang);
 
+    // ── Accuracy boost: for a single recognizable food, replace the AI's guessed
+    //    numbers with VERIFIED database values (per 100g) scaled by the portion. ──
+    string source = "ai";
+    if (FoodMatch.IsSingleItem(r.FoodName))
+    {
+        try
+        {
+            var searchTask = food.SearchAsync(r.FoodName);
+            if (await Task.WhenAny(searchTask, Task.Delay(6000)) == searchTask)
+            {
+                var match = searchTask.Result.FirstOrDefault(x => x.Calories > 0 && FoodMatch.IsTightMatch(r.FoodName, x.Name));
+                if (match is not null)
+                {
+                    double g = r.EstimatedGrams > 0 ? r.EstimatedGrams : (match.ServingGrams ?? 100);
+                    r.Calories = Math.Round(match.Calories * g / 100);
+                    r.Protein = Math.Round(match.Protein * g / 100, 1);
+                    r.Carbs = Math.Round(match.Carbs * g / 100, 1);
+                    r.Fat = Math.Round(match.Fat * g / 100, 1);
+                    r.EstimatedGrams = (int)Math.Round(g);
+                    r.Confidence = "high";
+                    source = "database";
+                }
+            }
+        }
+        catch { /* keep AI estimate */ }
+    }
+
+    // Every photo scan counts toward engagement analytics
+    u.PhotoCount += 1;
+    if (save)
+    {
+        var meal = new Meal
+        {
+            Food = r.FoodName, Protein = r.Protein, Carbs = r.Carbs, Fat = r.Fat,
+            Calories = r.Calories, EstimatedGrams = r.EstimatedGrams, Time = UserStore.NowTime(),
+        };
+        // persist photo count first, then meal via AddMeal (which reloads)
+        store.Set(u.Email, u);
+        store.AddMeal(u.Email, meal);
+    }
+    else
+    {
+        store.Set(u.Email, u); // just the photo-count bump
+    }
+
+    return Results.Ok(new { result = r, saved = save, source });
+});
+
+// Manual / confirmed meal log (from the confirm-edit screen, food search, or barcode).
+app.MapPost("/api/meals", (LogMealRequest req, HttpRequest http, UserStore store) =>
+{
+    var u = Auth(http, store);
+    if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    if (u.Targets is null) return Results.BadRequest(new { error = "no_profile" });
+
     var meal = new Meal
     {
-        Food = r.FoodName, Protein = r.Protein, Carbs = r.Carbs, Fat = r.Fat,
-        Calories = r.Calories, EstimatedGrams = r.EstimatedGrams, Time = UserStore.NowTime(),
+        Food = string.IsNullOrWhiteSpace(req.Food) ? "Food" : req.Food.Trim(),
+        Calories = Math.Round(req.Calories, 1), Protein = Math.Round(req.Protein, 1),
+        Carbs = Math.Round(req.Carbs, 1), Fat = Math.Round(req.Fat, 1),
+        EstimatedGrams = (int)Math.Round(req.Grams), Time = UserStore.NowTime(),
     };
     store.AddMeal(u.Email, meal);
 
-    // Count this food photo for engagement analytics
-    var fresh = store.Get(u.Email);
-    if (fresh is not null) { fresh.PhotoCount += 1; store.Set(u.Email, fresh); }
-
     var after = UserStore.TodayLog(store.Get(u.Email)!);
-    return Results.Ok(new { result = r, meal, remaining = new {
+    return Results.Ok(new { meal, today = after, remaining = new {
         calories = u.Targets.Calories - after.Calories,
         protein = u.Targets.Protein - after.Protein,
         carbs = u.Targets.Carbs - after.Carbs,
         fat = u.Targets.Fat - after.Fat,
     }});
+});
+
+// Recent distinct foods (for one-tap re-log of "my usual").
+app.MapGet("/api/recent", (HttpRequest http, UserStore store) =>
+{
+    var u = Auth(http, store);
+    if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var recent = new List<Meal>();
+    foreach (var day in u.Days.OrderByDescending(d => d.Key))
+        foreach (var m in Enumerable.Reverse(day.Value.Meals))
+            if (seen.Add(m.Food)) { recent.Add(m); if (recent.Count >= 15) break; }
+    return Results.Ok(new { recent });
+});
+
+// Food database search (Open Food Facts).
+app.MapGet("/api/foods/search", async (string q, HttpRequest http, UserStore store, FoodService food) =>
+{
+    if (Auth(http, store) is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    if (string.IsNullOrWhiteSpace(q)) return Results.Ok(new { results = new List<FoodItem>() });
+    return Results.Ok(new { results = await food.SearchAsync(q) });
+});
+
+// Barcode lookup (Open Food Facts).
+app.MapGet("/api/foods/barcode/{code}", async (string code, HttpRequest http, UserStore store, FoodService food) =>
+{
+    if (Auth(http, store) is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    var item = await food.BarcodeAsync(code);
+    return item is null ? Results.NotFound(new { error = "not_found" }) : Results.Ok(new { item });
 });
 
 app.MapPost("/api/undo", (HttpRequest http, UserStore store) =>
@@ -215,3 +309,35 @@ app.MapGet("/", () => "FitWolf API running.");
 app.Run();
 
 record LangBody(string Lang);
+
+// Helpers to decide when an AI-recognized food can be matched to a verified DB entry.
+static class FoodMatch
+{
+    private static readonly string[] Stop =
+        { "the", "and", "with", "of", "fresh", "raw", "cooked", "grilled", "boiled", "fried", "plain" };
+
+    // Single recognizable item (not a composite plate) → safe to use a DB match.
+    public static bool IsSingleItem(string name)
+    {
+        var n = (name ?? "").ToLowerInvariant();
+        if (n.Contains(" and ") || n.Contains(",") || n.Contains(" with ") || n.Contains("+")) return false;
+        return n.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 4;
+    }
+
+    // Tight match: every meaningful AI word is in the product name, and the product
+    // isn't much longer (so "banana" matches "banana" but NOT "banana yogurt drink").
+    public static bool IsTightMatch(string aiName, string productName)
+    {
+        var ai = Words(aiName);
+        var prod = Words(productName);
+        if (ai.Count == 0 || prod.Count == 0) return false;
+        if (!ai.All(prod.Contains)) return false;
+        return prod.Count <= ai.Count + 1;
+    }
+
+    private static HashSet<string> Words(string s) =>
+        (s ?? "").ToLowerInvariant()
+            .Split(new[] { ' ', '-', '/', '(', ')', ',', '.' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length >= 3 && !Stop.Contains(w))
+            .ToHashSet();
+}

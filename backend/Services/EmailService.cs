@@ -1,6 +1,6 @@
-using System.Net;
-using System.Net.Mail;
-using System.Net.Mime;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 
 namespace YsfCoach.Api.Services;
 
@@ -30,9 +30,11 @@ public class EmailService
         {
             var host = _cfg["Smtp:Host"]!;
             var port = int.TryParse(_cfg["Smtp:Port"], out var p) ? p : 587;
-            var user = _cfg["Smtp:User"]!;
-            var pass = _cfg["Smtp:Pass"] ?? "";
-            var from = _cfg["Smtp:From"] ?? user;
+            var user = (_cfg["Smtp:User"] ?? "").Trim();
+            // App passwords are often pasted with spaces — strip them so auth never fails.
+            var pass = (_cfg["Smtp:Pass"] ?? "").Replace(" ", "");
+            var from = (_cfg["Smtp:From"] ?? user).Trim();
+            var fromName = _cfg["Smtp:FromName"] ?? "FitWolf";
 
             var logoPath = AssetPath("wolf-logo.png");
             var mascotPath = AssetPath("wolf-mascot.png");
@@ -48,38 +50,26 @@ public class EmailService
 
             var html = BuildHtml(code, logoTag, mascotTag);
 
-            using var msg = new MailMessage(from, toEmail)
+            var builder = new BodyBuilder
             {
-                Subject = "🐺 Your FitWolf code: " + code,
+                TextBody = $"FitWolf\n\nYour verification code is: {code}\n\nIt expires in 10 minutes.\nIf you didn't request this, ignore this email.",
+                HtmlBody = html,
             };
+            if (hasLogo) builder.LinkedResources.Add(logoPath).ContentId = "wolflogo";
+            if (hasMascot) builder.LinkedResources.Add(mascotPath).ContentId = "wolfmascot";
 
-            // plain-text fallback
-            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(
-                $"FitWolf\n\nYour verification code is: {code}\n\nIt expires in 10 minutes.\nIf you didn't request this, ignore this email.",
-                null, MediaTypeNames.Text.Plain));
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(fromName, from));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = $"FitWolf code: {code}";
+            message.Body = builder.ToMessageBody();
 
-            // HTML view with embedded images
-            var htmlView = AlternateView.CreateAlternateViewFromString(html, null, MediaTypeNames.Text.Html);
-            if (hasLogo)
-            {
-                var lr = new LinkedResource(logoPath, "image/png") { ContentId = "wolflogo" };
-                lr.ContentType.Name = "wolf-logo.png";
-                htmlView.LinkedResources.Add(lr);
-            }
-            if (hasMascot)
-            {
-                var lr = new LinkedResource(mascotPath, "image/png") { ContentId = "wolfmascot" };
-                lr.ContentType.Name = "wolf-mascot.png";
-                htmlView.LinkedResources.Add(lr);
-            }
-            msg.AlternateViews.Add(htmlView);
-
-            using var client = new SmtpClient(host, port)
-            {
-                EnableSsl = true,
-                Credentials = new NetworkCredential(user, pass),
-            };
-            await client.SendMailAsync(msg);
+            // MailKit handles STARTTLS + AUTH correctly for Brevo, Gmail, SendGrid, etc.
+            using var client = new SmtpClient();
+            await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(user, pass);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
             _log.LogInformation("Verification email sent to {Email}", toEmail);
             return true;
         }

@@ -1,49 +1,69 @@
-﻿{
-    "expo":  {
-                 "name":  "FitWolf",
-                 "slug":  "fitwolf-coach",
-                 "version":  "1.0.0",
-                 "scheme":  "fitwolf",
-                 "orientation":  "portrait",
-                 "userInterfaceStyle":  "dark",
-                 "icon":  "./assets/wolf/wolf-logo.png",
-                 "splash":  {
-                                "image":  "./assets/wolf/splash.png",
-                                "resizeMode":  "cover",
-                                "backgroundColor":  "#0c0818"
-                            },
-                 "ios":  {
-                             "supportsTablet":  false,
-                             "bundleIdentifier":  "com.fitwolf.coach"
-                         },
-                 "android":  {
-                                 "package":  "com.fitwolf.coach",
-                                 "adaptiveIcon":  {
-                                                      "foregroundImage":  "./assets/wolf/wolf-logo.png",
-                                                      "backgroundColor":  "#0c0818"
-                                                  }
-                             },
-                 "plugins":  [
-                                 "expo-router",
-                                 [
-                                     "expo-image-picker",
-                                     {
-                                         "photosPermission":  "fitWolf uses your photos to analyze meals and track nutrition."
-                                     }
-                                 ],
-                                 [
-                                     "expo-notifications",
-                                     {
-                                         "icon":  "./assets/wolf/wolf-logo.png",
-                                         "color":  "#a855f7"
-                                     }
-                                 ]
-                             ],
-                 "extra":  {
-                               "apiUrl":  "http://192.168.0.100:5000",
-                               "eas":  {
-                                           "projectId":  "fitwolf-coach"
-                                       }
-                           }
-             }
+{
+  "expo": {
+    "name": "FitWolf",
+    "slug": "fitwolf-coach",
+    "version": "1.0.0",
+    "scheme": "fitwolf",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/wolf/wolf-logo.png",
+    "splash": {
+      "image": "./assets/wolf/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0c0818"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fitwolf.coach"
+    },
+    "android": {
+      "package": "com.fitwolf.coach",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/wolf/wolf-logo.png",
+        "backgroundColor": "#0c0818"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "fitWolf uses your photos to analyze meals and track nutrition."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "fitWolf uses your camera to scan food barcodes."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/wolf/wolf-logo.png",
+          "color": "#a855f7"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://192.168.0.100:5000",
+      "router": {},
+      "eas": {
+        "projectId": "d683db05-c540-443c-8183-f0e62759d223"
+      }
+    }
+  }
 }
