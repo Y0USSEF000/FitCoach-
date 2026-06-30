@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
-namespace YsfCoach.Api.Services;
+namespace FitWolf.Api.Services;
 
 /// <summary>Email verification codes, password hashing, and access tokens.</summary>
 public class AuthService

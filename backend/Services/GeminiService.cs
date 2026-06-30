@@ -1,8 +1,8 @@
 using System.Text;
 using System.Text.Json;
-using YsfCoach.Api.Models;
+using FitWolf.Api.Models;
 
-namespace YsfCoach.Api.Services;
+namespace FitWolf.Api.Services;
 
 /// <summary>
 /// Ports the Gemini text + vision calls. Uses the public generativelanguage REST API
@@ -149,7 +149,7 @@ public class GeminiService
     {
         var t = u.Targets!;
         var prompt =
-            $"You are YSF Coach, a nutritionist. Write in {LangName(lang)} only.\n" +
+            $"You are FitWolf, a nutritionist. Write in {LangName(lang)} only.\n" +
             "Create a 1-day sample meal plan for:\n" +
             $"Goal: {u.Goal} | {t.Calories} kcal | Protein: {t.Protein}g | Carbs: {t.Carbs}g | Fat: {t.Fat}g\n\n" +
             $"Use this format (translate to {LangName(lang)}):\n" +
@@ -167,7 +167,7 @@ public class GeminiService
     {
         var t = u.Targets!;
         var prompt =
-            $"You are YSF Coach, a professional nutrition coach. Respond in {LangName(lang)}.\n" +
+            $"You are FitWolf, a professional nutrition coach. Respond in {LangName(lang)}.\n" +
             $"Client: {u.Age}yo, {u.Height}cm, {u.Weight}kg, activity: {u.Activity}, goal: {u.Goal}.\n" +
             $"Targets: {t.Calories} kcal, {t.Protein}g protein, {t.Carbs}g carbs, {t.Fat}g fat.\n" +
             $"Write exactly 2 sentences in {LangName(lang)}: why these targets fit the goal, " +
@@ -188,30 +188,27 @@ public class GeminiService
         };
         var name = LangName(lang);
         var prompt =
-            $"You are a professional food recognition and nutrition AI. Respond ONLY in {name}.\n\n" +
-            "Identify EVERYTHING in this photo — any food, meal, snack, OR beverage:\n" +
-            "  • Beverages: coffee (black, latte, cappuccino, espresso), tea, juice, soda, smoothie, water, milk, energy drinks, alcohol\n" +
-            "  • Foods: any meal, fruit, vegetable, snack, fast food, dessert, raw ingredient\n\n" +
-            "NUTRITION ESTIMATES for common drinks (use as reference):\n" +
-            "  - Black coffee (no additions): ~5 kcal, 0g protein, 0g carbs, 0g fat\n" +
-            "  - Espresso (30ml): ~3 kcal\n" +
-            "  - Latte with whole milk (250ml): ~120 kcal, 6g protein, 10g carbs, 6g fat\n" +
-            "  - Cappuccino (200ml): ~80 kcal, 4g protein, 6g carbs, 4g fat\n" +
-            "  - Orange juice (250ml): ~110 kcal, 2g protein, 26g carbs, 0g fat\n" +
-            "  - Whole milk (250ml): ~150 kcal, 8g protein, 12g carbs, 8g fat\n" +
-            "  - Green tea (250ml): ~2 kcal, 0g protein, 0g carbs, 0g fat\n\n" +
+            $"You are an expert dietitian and food-vision AI trained on USDA FoodData Central and food photography. Respond ONLY in {name}.\n\n" +
+            "Analyze this photo and estimate its nutrition AS ACCURATELY AS POSSIBLE. Think step by step internally before answering:\n\n" +
+            "STEP 1 — Identify every distinct component on the plate/in the glass separately (e.g. 'rice', 'grilled chicken', 'olive oil', 'ketchup', 'bun', 'cheese'). Don't lump everything into one item.\n" +
+            "STEP 2 — Estimate the WEIGHT in grams of EACH component using visual size cues: a standard dinner plate is ~26cm, a fork ~19cm, a tablespoon ~15g, a closed fist ~150g, a deck-of-cards of meat ~85g, a slice of bread ~30g, a cup ~240ml.\n" +
+            "STEP 3 — For EACH component, use realistic per-100g values from standard nutrition databases. CRUCIAL: account for the cooking method and hidden ingredients — fried foods absorb oil (add ~8-12g fat per portion), sauces/dressings/butter/sugar add real calories, grilled/boiled add little. Don't underestimate restaurant or fast food.\n" +
+            "STEP 4 — SUM all components to get the TOTAL calories, protein, carbs, fat, fiber, sugar, sodium for the whole photo. estimated_grams = total weight of all food.\n\n" +
+            "Reference values for common drinks: Black coffee ~5 kcal; Espresso 30ml ~3 kcal; Latte 250ml ~120 kcal/6P/10C/6F; Cappuccino 200ml ~80 kcal/4P/6C/4F; Orange juice 250ml ~110 kcal/2P/26C; Whole milk 250ml ~150 kcal/8P/12C/8F; Green tea ~2 kcal; Cola 330ml ~140 kcal/35C sugar.\n\n" +
             $"User daily targets: {targets.Calories} kcal | {targets.Protein}g protein | {targets.Carbs}g carbs | {targets.Fat}g fat\n" +
             $"Already eaten today: {eaten.Calories} kcal | {eaten.Protein}g protein | {eaten.Carbs}g carbs | {eaten.Fat}g fat\n" +
             $"Still remaining: {rem.calories} kcal | {rem.protein}g protein | {rem.carbs}g carbs | {rem.fat}g fat\n\n" +
             "RULES:\n" +
-            "1. ALWAYS return a valid JSON — never refuse, never add text outside the JSON.\n" +
-            "2. If the image is unclear, make your best estimate with confidence 'low'.\n" +
-            "3. Estimate serving size from the photo (cup size, plate size, etc.).\n" +
-            "4. Write food_name, coach_message, and ingredients_detected in " + name + ".\n\n" +
+            "1. ALWAYS return ONE valid JSON object — never refuse, never write anything outside the JSON.\n" +
+            "2. If the image is unclear, still give your best numeric estimate and set confidence to 'low'.\n" +
+            "3. 'ingredients_detected' MUST be a per-item breakdown listing each component with its grams and kcal, e.g. 'Grilled chicken (120g, 200 kcal); White rice (150g, 195 kcal); Olive oil (10g, 88 kcal)'.\n" +
+            "4. 'coach_message' = one short sentence comparing this meal to the user's remaining targets.\n" +
+            "5. Write food_name, coach_message, and ingredients_detected in " + name + ". Numbers must be plain numbers (no units inside JSON values).\n\n" +
             "Return EXACTLY this JSON structure (raw, no markdown fences):\n" +
-            "{\"food_name\":\"Black Coffee\",\"estimated_grams\":250,\"calories\":5,\"protein\":0.3," +
-            "\"carbs\":0,\"fat\":0,\"fiber\":0,\"sugar\":0,\"sodium\":5," +
-            "\"confidence\":\"high\",\"coach_message\":\"Great low-calorie choice!\",\"ingredients_detected\":\"Coffee\"}";
+            "{\"food_name\":\"Chicken & rice plate\",\"estimated_grams\":280,\"calories\":483,\"protein\":42," +
+            "\"carbs\":45,\"fat\":15,\"fiber\":2,\"sugar\":1,\"sodium\":380," +
+            "\"confidence\":\"high\",\"coach_message\":\"High-protein and fits your remaining calories well.\"," +
+            "\"ingredients_detected\":\"Grilled chicken (120g, 200 kcal); White rice (150g, 195 kcal); Olive oil (10g, 88 kcal)\"}";
 
         var raw = (await VisionAsync(image, prompt)).Trim();
         if (string.IsNullOrEmpty(raw)) throw new InvalidOperationException($"Gemini failed. Last error: {_lastGeminiError}");
@@ -230,6 +227,86 @@ public class GeminiService
 
         // Fallback: try lenient parse by extracting key fields
         return ParseFallback(raw, name);
+    }
+
+    // ─── Food name search (typed food → nutrition) ──────
+    public async Task<FoodAnalysisResult> SearchFoodByNameAsync(string query, double grams, string lang)
+    {
+        var name = LangName(lang);
+        var portion = grams > 0
+            ? $"for exactly {grams} grams of it"
+            : "for ONE typical serving (and set estimated_grams to that serving's weight)";
+        var prompt =
+            $"You are an expert dietitian using USDA FoodData Central. Respond ONLY in {name}.\n" +
+            $"Give the nutrition {portion} of this food: \"{query}\".\n" +
+            "Use realistic values and account for the usual way it is prepared (oil, sauces, sugar).\n" +
+            "Numbers must be plain numbers, no units. ALWAYS return ONE valid JSON object only, no markdown.\n" +
+            "Write food_name and coach_message in " + name + ".\n" +
+            "Return EXACTLY this JSON:\n" +
+            "{\"food_name\":\"Margherita pizza slice\",\"estimated_grams\":120,\"calories\":285,\"protein\":12," +
+            "\"carbs\":36,\"fat\":10,\"fiber\":2,\"sugar\":4,\"sodium\":640," +
+            "\"confidence\":\"high\",\"coach_message\":\"Tasty but carb-heavy — pair it with protein.\"," +
+            "\"ingredients_detected\":\"Dough, tomato sauce, mozzarella\"}";
+
+        var raw = (await TextAsync(prompt)).Trim();
+        if (string.IsNullOrEmpty(raw)) throw new InvalidOperationException($"Gemini failed. Last error: {_lastGeminiError}");
+        raw = ExtractJson(raw);
+        try
+        {
+            var result = JsonSerializer.Deserialize<FoodAnalysisResult>(raw);
+            if (result != null) return result;
+        }
+        catch (JsonException ex) { _log.LogWarning(ex, "Search JSON parse failed, raw: {Raw}", raw); }
+        return ParseFallback(raw, name);
+    }
+
+    // ─── Food name search → MULTIPLE options to choose from ──
+    public async Task<List<FoodAnalysisResult>> SearchFoodOptionsAsync(string query, string lang)
+    {
+        var name = LangName(lang);
+        var prompt =
+            $"You are an expert dietitian using USDA FoodData Central. Respond ONLY in {name}.\n" +
+            $"The user searched for the food: \"{query}\".\n" +
+            "Return a JSON ARRAY of 5 to 8 of the most common real variants or types of this food " +
+            "(different proteins like chicken/beef/mix, different styles, sizes, sandwich vs plate, or closely related dishes the user might mean). " +
+            "Each entry is ONE typical serving with realistic nutrition — account for oil, bread, sauces and how it is usually prepared.\n" +
+            "Set estimated_grams to that serving's weight. Numbers must be plain numbers, no units.\n" +
+            "Write food_name in " + name + ". Return ONLY the JSON array (no markdown), like:\n" +
+            "[{\"food_name\":\"Chicken shawarma sandwich\",\"estimated_grams\":250,\"calories\":480,\"protein\":28,\"carbs\":45,\"fat\":20,\"fiber\":3,\"sugar\":4,\"sodium\":900,\"confidence\":\"high\",\"coach_message\":\"\",\"ingredients_detected\":\"Chicken, bread, garlic sauce\"}," +
+            "{\"food_name\":\"Beef shawarma plate\",\"estimated_grams\":350,\"calories\":650,\"protein\":35,\"carbs\":50,\"fat\":32,\"fiber\":4,\"sugar\":5,\"sodium\":1100,\"confidence\":\"high\",\"coach_message\":\"\",\"ingredients_detected\":\"Beef, rice, salad\"}]";
+
+        var raw = (await TextAsync(prompt)).Trim();
+        if (string.IsNullOrEmpty(raw)) throw new InvalidOperationException($"Gemini failed. Last error: {_lastGeminiError}");
+        raw = ExtractJsonArray(raw);
+        try
+        {
+            var list = JsonSerializer.Deserialize<List<FoodAnalysisResult>>(raw);
+            if (list != null && list.Count > 0) return list;
+        }
+        catch (JsonException ex) { _log.LogWarning(ex, "Search options JSON parse failed, raw: {Raw}", raw); }
+        // Fallback: at least return the single best estimate.
+        return new List<FoodAnalysisResult> { await SearchFoodByNameAsync(query, 0, lang) };
+    }
+
+    private static string ExtractJsonArray(string raw)
+    {
+        if (raw.Contains("```"))
+        {
+            foreach (var block in raw.Split("```"))
+            {
+                var trimmed = block.TrimStart().TrimStart("json\n".ToCharArray()).Trim();
+                if (trimmed.StartsWith("[")) { raw = trimmed; break; }
+            }
+        }
+        int start = raw.IndexOf('[');
+        if (start == -1) return raw;
+        int depth = 0, end = -1;
+        for (int i = start; i < raw.Length; i++)
+        {
+            if (raw[i] == '[') depth++;
+            else if (raw[i] == ']') { depth--; if (depth == 0) { end = i; break; } }
+        }
+        return (end > start) ? raw.Substring(start, end - start + 1) : raw;
     }
 
     private static string ExtractJson(string raw)

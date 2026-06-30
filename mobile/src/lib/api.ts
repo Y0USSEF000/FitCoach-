@@ -83,6 +83,15 @@ export const api = {
     return json("/api/analyze", { method: "POST", body: form });
   },
 
+  searchFood: (query: string): Promise<{ options: any[] }> =>
+    json("/api/food/search", { method: "POST", body: JSON.stringify({ query, grams: 0 }) }),
+
+  logFood: (item: any) =>
+    json("/api/food/log", { method: "POST", body: JSON.stringify(item) }),
+
+  scanBarcode: (code: string, grams?: number) =>
+    json(`/api/food/barcode/${encodeURIComponent(code)}${grams ? `?grams=${grams}` : ""}`),
+
   undo: () => json("/api/undo", { method: "POST" }),
 
   getNotifications: async (): Promise<NotificationPrefs | null> => {

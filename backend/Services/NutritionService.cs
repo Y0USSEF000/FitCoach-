@@ -1,6 +1,6 @@
-using YsfCoach.Api.Models;
+using FitWolf.Api.Models;
 
-namespace YsfCoach.Api.Services;
+namespace FitWolf.Api.Services;
 
 /// <summary>Ports calculate_targets / calculate_bmi from the original bot.</summary>
 public static class NutritionService

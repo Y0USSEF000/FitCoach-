@@ -9,6 +9,51 @@ import { Card, DuoButton, Screen, Entrance } from "@/lib/ui";
 import { Mascot } from "@/lib/mascot";
 import { C, SPACING, FONT, RADIUS, macroColors, shadow } from "@/lib/theme";
 
+// Colors per meal time (matched by the emoji the AI uses).
+const MEAL_COLORS: Record<string, string> = {
+  "🌅": macroColors.calories, "☀️": macroColors.carbs, "☀": macroColors.carbs,
+  "🌙": C.primary, "🍎": macroColors.protein,
+};
+const mealColor = (e: string) => MEAL_COLORS[e] ?? C.primary;
+
+type ParsedMeal = { emoji: string; title: string; body: string; kcal?: string };
+
+// Turn the AI's plain-text plan into structured meal cards + a tips list.
+// Anchors on the meal emojis (language-independent) and the 💡 tips marker.
+function parsePlan(plan: string): { meals: ParsedMeal[]; tips: string[] } {
+  const emojis = ["🌅", "☀️", "🌙", "🍎"];
+  let mealPart = plan;
+  let tipsPart = "";
+  const tipIdx = plan.indexOf("💡");
+  if (tipIdx >= 0) { mealPart = plan.slice(0, tipIdx); tipsPart = plan.slice(tipIdx + 2); }
+
+  const positions: { idx: number; emoji: string }[] = [];
+  for (const e of emojis) {
+    let i = mealPart.indexOf(e);
+    while (i >= 0) { positions.push({ idx: i, emoji: e }); i = mealPart.indexOf(e, i + e.length); }
+  }
+  positions.sort((a, b) => a.idx - b.idx);
+
+  const meals: ParsedMeal[] = [];
+  for (let k = 0; k < positions.length; k++) {
+    const start = positions[k].idx;
+    const end = k + 1 < positions.length ? positions[k + 1].idx : mealPart.length;
+    const chunk = mealPart.slice(start, end).trim();
+    const emoji = positions[k].emoji;
+    let rest = chunk.slice(emoji.length).trim();
+    let title = rest, body = "";
+    const colon = rest.indexOf(":");
+    if (colon >= 0) { title = rest.slice(0, colon).trim(); body = rest.slice(colon + 1).trim(); }
+    const kcal = chunk.match(/(\d[\d,.]*)\s*kcal/i)?.[1];
+    meals.push({ emoji, title, body: body.replace(/\s*\n\s*/g, "  ").trim(), kcal });
+  }
+
+  const tips = tipsPart.split("\n")
+    .map((l) => l.replace(/^[\s•\-*\d.):]+/, "").trim())
+    .filter((l) => l.length > 1);
+  return { meals, tips };
+}
+
 export default function Program() {
   const { lang } = useApp();
   const [plan, setPlan] = useState<string | null>(null);
@@ -116,7 +161,9 @@ export default function Program() {
           </View>
         )}
 
-        {plan && !loading && (
+        {plan && !loading && (() => {
+          const { meals: planMeals, tips } = parsePlan(plan);
+          return (
           <>
             {/* Coach message */}
             {coach ? (
@@ -131,18 +178,62 @@ export default function Program() {
               </Entrance>
             ) : null}
 
-            {/* Plan text */}
-            <Entrance delay={60}>
-              <Card>
-                <Text style={s.planText}>{plan}</Text>
+            {/* How to use — explainer */}
+            <Entrance delay={40}>
+              <Card style={s.introCard} accent={C.primary}>
+                <Text style={s.introTitle}>📖 {t(lang, "how_to_use")}</Text>
+                <Text style={s.introText}>{t(lang, "how_to_use_body")}</Text>
               </Card>
             </Entrance>
 
-            <Entrance delay={120}>
+            {/* Meal cards */}
+            {planMeals.length > 0 ? planMeals.map((m, i) => {
+              const col = mealColor(m.emoji);
+              return (
+                <Entrance key={i} delay={90 + i * 60}>
+                  <Card style={s.mealCard} accent={col}>
+                    <View style={s.mealHead}>
+                      <View style={[s.mealIcon, { backgroundColor: `${col}22` }]}>
+                        <Text style={{ fontSize: 22 }}>{m.emoji}</Text>
+                      </View>
+                      <Text style={[s.mealTitle, { color: col }]}>{m.title}</Text>
+                      {m.kcal ? (
+                        <View style={[s.kcalBadge, { borderColor: `${col}55`, backgroundColor: `${col}15` }]}>
+                          <Text style={[s.kcalText, { color: col }]}>{m.kcal} kcal</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {m.body ? <Text style={s.mealBody}>{m.body}</Text> : null}
+                  </Card>
+                </Entrance>
+              );
+            }) : (
+              <Entrance delay={90}>
+                <Card><Text style={s.planText}>{plan}</Text></Card>
+              </Entrance>
+            )}
+
+            {/* Tips */}
+            {tips.length > 0 && (
+              <Entrance delay={300}>
+                <Card style={s.tipsCard} accent={C.green}>
+                  <Text style={s.tipsTitle}>💡 {t(lang, "tips")}</Text>
+                  {tips.map((tip, i) => (
+                    <View key={i} style={s.tipRow}>
+                      <Text style={s.tipCheck}>✓</Text>
+                      <Text style={s.tipText}>{tip}</Text>
+                    </View>
+                  ))}
+                </Card>
+              </Entrance>
+            )}
+
+            <Entrance delay={360}>
               <DuoButton color="white" icon="↻" label={t(lang, "get_program")} onPress={generate} />
             </Entrance>
           </>
-        )}
+          );
+        })()}
       </ScrollView>
     </Screen>
   );
@@ -201,4 +292,22 @@ const s = StyleSheet.create({
   coachText: { color: C.text, fontSize: FONT.body, fontWeight: "600", lineHeight: 24, fontStyle: "italic" },
 
   planText: { color: C.text, fontSize: FONT.body, fontWeight: "600", lineHeight: 28 },
+
+  introCard: { marginBottom: SPACING.lg },
+  introTitle: { color: C.text, fontSize: FONT.h3, fontWeight: "900", marginBottom: SPACING.sm },
+  introText: { color: C.sub, fontSize: FONT.body, fontWeight: "600", lineHeight: 22 },
+
+  mealCard: { marginBottom: SPACING.md },
+  mealHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  mealIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  mealTitle: { flex: 1, fontSize: FONT.h3, fontWeight: "900" },
+  kcalBadge: { borderWidth: 1.5, borderRadius: RADIUS.pill, paddingVertical: 5, paddingHorizontal: 12 },
+  kcalText: { fontSize: FONT.small, fontWeight: "900" },
+  mealBody: { color: C.text, fontSize: FONT.body, fontWeight: "600", lineHeight: 24, marginTop: SPACING.md },
+
+  tipsCard: { marginBottom: SPACING.lg },
+  tipsTitle: { color: C.text, fontSize: FONT.h3, fontWeight: "900", marginBottom: SPACING.md },
+  tipRow: { flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.sm, alignItems: "flex-start" },
+  tipCheck: { color: C.green, fontSize: FONT.body, fontWeight: "900", marginTop: 1 },
+  tipText: { flex: 1, color: C.sub, fontSize: FONT.body, fontWeight: "600", lineHeight: 22 },
 });

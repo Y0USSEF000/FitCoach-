@@ -1,5 +1,5 @@
-using YsfCoach.Api.Models;
-using YsfCoach.Api.Services;
+using FitWolf.Api.Models;
+using FitWolf.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +7,7 @@ builder.Services.AddSingleton<UserStore>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddHttpClient<GeminiService>(c => c.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddHttpClient<FoodService>(c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -14,6 +15,25 @@ app.UseCors();
 
 // Resolve the signed-in account from the X-Auth-Token header.
 User? Auth(HttpRequest r, UserStore store) => store.GetByToken(r.Headers["X-Auth-Token"].FirstOrDefault());
+
+// Turn a nutrition result into a logged meal and return the standard response
+// (same shape as /api/analyze) so the app can reuse one handler everywhere.
+object LogFood(UserStore store, User u, FitWolf.Api.Models.FoodAnalysisResult r)
+{
+    var meal = new Meal
+    {
+        Food = r.FoodName, Protein = r.Protein, Carbs = r.Carbs, Fat = r.Fat,
+        Calories = r.Calories, EstimatedGrams = r.EstimatedGrams, Time = UserStore.NowTime(),
+    };
+    store.AddMeal(u.Email, meal);
+    var after = UserStore.TodayLog(store.Get(u.Email)!);
+    return new { result = r, meal, remaining = new {
+        calories = u.Targets!.Calories - after.Calories,
+        protein = u.Targets.Protein - after.Protein,
+        carbs = u.Targets.Carbs - after.Carbs,
+        fat = u.Targets.Fat - after.Fat,
+    }};
+}
 
 // ═══════════════════ AUTH ═══════════════════
 
@@ -24,9 +44,10 @@ app.MapPost("/api/auth/start", async (AuthStartRequest req, UserStore store, Aut
     var existing = store.Get(req.Email);
     bool exists = existing != null && !string.IsNullOrEmpty(existing.PasswordHash);
     var code = auth.IssueCode(req.Email);
-    await email.SendCodeAsync(req.Email, code);
-    // In dev (no SMTP configured) return the code so it can be shown in-app.
-    return Results.Ok(new { exists, devCode = email.IsConfigured ? null : code });
+    var sent = await email.SendCodeAsync(req.Email, code);
+    // Show the code in-app if SMTP isn't configured OR the send failed
+    // (e.g. Brevo account not yet activated) — so login still works.
+    return Results.Ok(new { exists, devCode = sent ? null : code });
 });
 
 // 2) Verify the code. If the account is registered → log in (return token).
@@ -158,6 +179,37 @@ app.MapPost("/api/analyze", async (HttpRequest http, UserStore store, GeminiServ
     }});
 });
 
+// Search a food by typed name → a LIST of options to choose from (does NOT log).
+app.MapPost("/api/food/search", async (FoodSearchRequest req, HttpRequest http, UserStore store, GeminiService gemini) =>
+{
+    var u = Auth(http, store);
+    if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    if (u.Targets is null) return Results.BadRequest(new { error = "no_profile" });
+    if (string.IsNullOrWhiteSpace(req.Query)) return Results.BadRequest(new { error = "empty_query" });
+    var options = await gemini.SearchFoodOptionsAsync(req.Query.Trim(), u.Lang);
+    return Results.Ok(new { options });
+});
+
+// Log a chosen food (from search options) as a meal.
+app.MapPost("/api/food/log", (FitWolf.Api.Models.FoodAnalysisResult item, HttpRequest http, UserStore store) =>
+{
+    var u = Auth(http, store);
+    if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    if (u.Targets is null) return Results.BadRequest(new { error = "no_profile" });
+    return Results.Ok(LogFood(store, u, item));
+});
+
+// Scan a barcode → Open Food Facts product nutrition, logged as a meal.
+app.MapGet("/api/food/barcode/{code}", async (string code, double? grams, HttpRequest http, UserStore store, FoodService food) =>
+{
+    var u = Auth(http, store);
+    if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    if (u.Targets is null) return Results.BadRequest(new { error = "no_profile" });
+    var r = await food.LookupBarcodeAsync(code, grams ?? 0);
+    if (r is null) return Results.NotFound(new { error = "product_not_found" });
+    return Results.Ok(LogFood(store, u, r));
+});
+
 app.MapPost("/api/undo", (HttpRequest http, UserStore store) =>
 {
     var u = Auth(http, store);
@@ -202,3 +254,4 @@ app.MapGet("/", () => "FitWolf API running.");
 app.Run();
 
 record LangBody(string Lang);
+record FoodSearchRequest(string Query, double Grams);

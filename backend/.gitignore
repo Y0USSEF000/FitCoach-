@@ -1,4 +1,10 @@
 bin/
 obj/
 users.json
+accounts.json
 appsettings.Development.json
+
+# Local database with real user data — never commit
+*.db
+*.db-shm
+*.db-wal

@@ -1,7 +1,7 @@
 using System.Text.Json;
-using YsfCoach.Api.Models;
+using FitWolf.Api.Models;
 
-namespace YsfCoach.Api.Services;
+namespace FitWolf.Api.Services;
 
 /// <summary>File-backed account store, keyed by lowercased email.</summary>
 public class UserStore

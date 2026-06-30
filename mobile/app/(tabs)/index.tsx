@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, Animated } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useApp } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { api, Targets, DayLog } from "@/lib/api";
-import { Card, MacroBar, Ring, Stat, Screen, GradientBanner, Tag, Entrance, LogButton } from "@/lib/ui";
+import { Card, MacroBar, Ring, Stat, Screen, GradientBanner, Tag, Entrance, LogButton, DuoButton } from "@/lib/ui";
 import { Mascot } from "@/lib/mascot";
 import { macroColors, macroGlows, C, SPACING, FONT, RADIUS, glow } from "@/lib/theme";
 import { nudgeIfNotEaten } from "@/lib/notifications";
@@ -22,6 +22,7 @@ function computeStreak(days: Record<string, any>): number {
 
 export default function Dashboard() {
   const { lang } = useApp();
+  const router = useRouter();
   const [targets, setTargets] = useState<Targets | null>(null);
   const [today, setToday] = useState<DayLog | null>(null);
   const [bmi, setBmi] = useState<number | null>(null);
@@ -193,13 +194,25 @@ export default function Dashboard() {
           </Entrance>
         )}
 
-        {/* ── Log CTA ── */}
+        {/* ── Log CTA (photo) ── */}
         <Entrance delay={320}>
           <LogButton
             label={analyzing ? t(lang, "analyzing") : t(lang, "log_meal")}
             onPress={logMeal}
             loading={analyzing}
           />
+        </Entrance>
+
+        {/* ── Other ways to log ── */}
+        <Entrance delay={380}>
+          <View style={s.logRow}>
+            <View style={{ flex: 1 }}>
+              <DuoButton label="Search" icon="🔍" color="white" onPress={() => router.push("/search-food")} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <DuoButton label="Barcode" icon="🏷️" color="white" onPress={() => router.push("/scan-barcode")} />
+            </View>
+          </View>
         </Entrance>
       </ScrollView>
     </Screen>
@@ -209,6 +222,7 @@ export default function Dashboard() {
 const s = StyleSheet.create({
   wrap: { padding: SPACING.lg, paddingBottom: 60 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.bg },
+  logRow: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.xs },
 
   header: { marginTop: SPACING.xs, paddingVertical: SPACING.xl, paddingHorizontal: SPACING.xl, overflow: "hidden" },
   decoCircle: {

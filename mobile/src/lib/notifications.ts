@@ -1,19 +1,33 @@
-import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import { Lang, t } from "./i18n";
 import type { NotificationPrefs } from "./api";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Expo Go (SDK 53+) removed push notifications and prints a loud error the
+// moment `expo-notifications` is imported. So we only load it OUTSIDE Expo Go
+// (i.e. in a development/standalone build). In Expo Go these functions become
+// safe no-ops — the rest of the app works normally.
+const isExpoGo = Constants.executionEnvironment === "storeClient";
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Notifications: typeof import("expo-notifications") | null = isExpoGo
+  ? null
+  : require("expo-notifications");
+
+if (Notifications) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function requestPermissions(): Promise<boolean> {
+  if (!Notifications) return false;
   if (!Device.isDevice) return false;
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("reminders", {
@@ -41,6 +55,7 @@ function parseHM(hm: string): { hour: number; minute: number } {
  *  - "did you eat today" → daily at 20:00
  */
 export async function rescheduleAll(lang: Lang, prefs: NotificationPrefs) {
+  if (!Notifications) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   if (prefs.mealReminders) {
@@ -71,6 +86,7 @@ export async function rescheduleAll(lang: Lang, prefs: NotificationPrefs) {
 
 /** Fire an immediate "did you eat today?" nudge if nothing logged. */
 export async function nudgeIfNotEaten(lang: Lang, mealsToday: number) {
+  if (!Notifications) return;
   if (mealsToday > 0) return;
   await Notifications.scheduleNotificationAsync({
     content: { title: t(lang, "notif_check_title"), body: t(lang, "notif_check_body"), data: { kind: "check" } },

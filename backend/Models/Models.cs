@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace YsfCoach.Api.Models;
+namespace FitWolf.Api.Models;
 
 public class Targets
 {
