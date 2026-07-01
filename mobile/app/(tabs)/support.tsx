@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Share } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Share, Linking, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/lib/store";
@@ -22,6 +22,18 @@ export default function Support() {
         message: "I'm using FitWolf — snap a photo of your food and it tracks your calories with AI. Join me!",
       });
     } catch {}
+  };
+
+  // TODO: replace REPLACE_ME with your real payment link
+  // (e.g. https://www.buymeacoffee.com/yourname, https://ko-fi.com/yourname, or https://paypal.me/yourname/5)
+  const DONATE_URL = "https://www.buymeacoffee.com/REPLACE_ME";
+
+  const donate = async () => {
+    if (DONATE_URL.includes("REPLACE_ME")) {
+      Alert.alert("Almost ready", "Add your real payment link in support.tsx (Buy Me a Coffee, Ko-fi, or PayPal.me) to enable donations.");
+      return;
+    }
+    try { await Linking.openURL(DONATE_URL); } catch {}
   };
 
   return (
@@ -74,6 +86,20 @@ export default function Support() {
               and it's free.
             </Text>
             <DuoButton label="Share FitWolf" onPress={invite} />
+          </Card>
+        </Entrance>
+
+        <Entrance delay={240}>
+          <Card accent={C.green}>
+            <View style={s.hRow}>
+              <Ionicons name="cafe-outline" size={20} color={C.green} />
+              <Text style={s.h}>Buy us a coffee</Text>
+            </View>
+            <Text style={s.p}>
+              Totally optional — never required. If FitWolf helps you and you'd like to
+              chip in for the servers, a small tip means a lot.
+            </Text>
+            <DuoButton label="Send $5  (≈ 50 DH)" color="green" onPress={donate} />
           </Card>
         </Entrance>
       </ScrollView>
