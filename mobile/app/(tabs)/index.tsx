@@ -3,10 +3,11 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, 
 import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { api, Targets, DayLog } from "@/lib/api";
-import { Card, MacroBar, Ring, Stat, Screen, GradientBanner, Tag, Entrance, LogButton, DuoButton } from "@/lib/ui";
+import { Card, MacroBar, Ring, Stat, Screen, GradientBanner, Entrance, LogButton, DuoButton } from "@/lib/ui";
 import { Mascot } from "@/lib/mascot";
 import { macroColors, macroGlows, C, SPACING, FONT, RADIUS, glow } from "@/lib/theme";
 import { nudgeIfNotEaten } from "@/lib/notifications";
@@ -20,6 +21,16 @@ function computeStreak(days: Record<string, any>): number {
   return streak;
 }
 
+function HeaderStat({ icon, value, label }: { icon: any; value?: string; label: string }) {
+  return (
+    <View style={s.hstat}>
+      <Ionicons name={icon} size={18} color="#fff" />
+      {value ? <Text style={s.hstatValue}>{value}</Text> : null}
+      <Text style={s.hstatLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function Dashboard() {
   const { lang } = useApp();
   const router = useRouter();
@@ -31,6 +42,7 @@ export default function Dashboard() {
   const [totalMeals, setTotalMeals] = useState(0);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [founder, setFounder] = useState(false);
 
   const load = async () => {
     try {
@@ -42,6 +54,7 @@ export default function Dashboard() {
         setBmiCat(me.bmiCategory ?? "");
         const days = me.user.days ?? {};
         setStreak(computeStreak(days));
+        setFounder(!!me.user?.isFounder);
         setTotalMeals(Object.values(days).reduce((n: number, d: any) => n + (d.meals?.length ?? 0), 0));
         nudgeIfNotEaten(lang, me.today?.meals?.length ?? 0);
       }
@@ -129,9 +142,11 @@ export default function Dashboard() {
               </View>
               <Mascot pose="flex" size={80} />
             </View>
-            <View style={s.tags}>
-              <Tag light icon="🔥" label={`${streak} ${t(lang, "streak")}`} />
-              <Tag light icon="🍽️" label={`${totalMeals} ${t(lang, "logged")}`} />
+            <View style={s.statBar}>
+              <HeaderStat icon="flame" value={String(streak)} label={t(lang, "streak")} />
+              <View style={s.hstatSep} />
+              <HeaderStat icon="restaurant" value={String(totalMeals)} label={t(lang, "logged")} />
+              {founder && <><View style={s.hstatSep} /><HeaderStat icon="star" label="Founder" /></>}
             </View>
           </GradientBanner>
         </Entrance>
@@ -236,7 +251,15 @@ const s = StyleSheet.create({
 
   brand: { color: "rgba(255,255,255,0.55)", fontSize: FONT.h1, fontWeight: "900", letterSpacing: -1 },
   greeting: { color: "rgba(255,255,255,0.75)", fontSize: FONT.small, fontWeight: "700", marginTop: 4 },
-  tags: { flexDirection: "row", gap: 8, marginTop: SPACING.lg },
+  statBar: {
+    flexDirection: "row", alignItems: "center", marginTop: SPACING.lg,
+    backgroundColor: "rgba(255,255,255,0.12)", borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)",
+  },
+  hstat: { flex: 1, alignItems: "center", gap: 2 },
+  hstatValue: { color: "#fff", fontSize: FONT.h3, fontWeight: "900" },
+  hstatLabel: { color: "rgba(255,255,255,0.8)", fontSize: FONT.tiny, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 },
+  hstatSep: { width: 1, height: 34, backgroundColor: "rgba(255,255,255,0.2)" },
 
   ringCard: { alignItems: "center", paddingVertical: SPACING.xxl },
   statsRow: { flexDirection: "row", alignItems: "center", marginTop: SPACING.xl, alignSelf: "stretch" },

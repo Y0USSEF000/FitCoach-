@@ -60,7 +60,7 @@ export default function Welcome() {
 
         <View style={s.actions}>
           <DuoButton label={t(lang, "get_started")} onPress={() => router.push("/auth")} />
-          <DuoButton label={t(lang, "have_account")} color="white" onPress={() => router.push("/auth")} />
+          <DuoButton label={t(lang, "have_account")} color="white" onPress={() => router.push("/login")} />
         </View>
       </Animated.View>
     </Screen>
@@ -74,7 +74,9 @@ const s = StyleSheet.create({
   glowRing: {
     position: "absolute",
     width: 300, height: 300, borderRadius: 150,
-    backgroundColor: "transparent",
+    // Translucent fill = a soft halo that shows on Android too (iOS-only
+    // shadows don't render a glow on Android).
+    backgroundColor: `${C.primary}22`,
     shadowColor: C.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 40,
     borderWidth: 1, borderColor: `${C.primary}20`,
   },
@@ -83,6 +85,7 @@ const s = StyleSheet.create({
     width: 260, height: 260, borderRadius: 130,
     alignItems: "center", justifyContent: "center", overflow: "hidden",
     shadowColor: C.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.7, shadowRadius: 24,
+    elevation: 12, // Android depth (shadow* is iOS-only)
   },
   badgeImg: { resizeMode: "contain" },
   brand: { fontSize: 54, fontWeight: "900", color: C.text, letterSpacing: -2, marginTop: SPACING.xl },

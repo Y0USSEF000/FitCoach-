@@ -67,9 +67,20 @@ export default function Program() {
 
   const generate = async () => {
     setLoading(true);
-    try { const out = await api.program(); setPlan(out.plan); setCoach(out.coach ?? ""); }
-    catch { setPlan("⚠️ Could not generate the meal plan. Check your connection."); }
-    finally { setLoading(false); }
+    // Retry a couple of times — the AI can be briefly busy/rate-limited, and the
+    // local Wi-Fi request can hiccup. Retrying makes it reliable on both phones.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const out = await api.program();
+        setPlan(out.plan); setCoach(out.coach ?? "");
+        setLoading(false);
+        return;
+      } catch {
+        await new Promise((r) => setTimeout(r, 900));
+      }
+    }
+    setPlan("⚠️ The AI is busy right now. Tap “Get meal program” to try again.");
+    setLoading(false);
   };
 
   const meals = [

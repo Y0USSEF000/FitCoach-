@@ -75,7 +75,7 @@ app.MapPost("/api/auth/verify", (AuthVerifyRequest req, UserStore store, AuthSer
 });
 
 // 3) New user finishes sign-up (name + password) → returns token.
-app.MapPost("/api/auth/register", (RegisterRequest req, UserStore store, AuthService auth) =>
+app.MapPost("/api/auth/register", (RegisterRequest req, UserStore store, AuthService auth, IConfiguration cfg) =>
 {
     var u = store.Get(req.Email);
     if (u == null || !u.Verified) return Results.BadRequest(new { error = "email_not_verified" });
@@ -87,9 +87,12 @@ app.MapPost("/api/auth/register", (RegisterRequest req, UserStore store, AuthSer
     u.Name = (req.Name ?? "").Trim();
     u.PasswordHash = hash;
     u.PasswordSalt = salt;
+    // While Founders mode is open, early adopters get FitWolf free forever.
+    // Flip "FoundersOpen": false in config once you start charging new users.
+    if (cfg.GetValue<bool?>("FoundersOpen") ?? true) u.IsFounder = true;
     u.Token = auth.NewToken();
     store.Set(u.Email, u);
-    return Results.Ok(new { token = u.Token, profileComplete = u.ProfileComplete });
+    return Results.Ok(new { token = u.Token, profileComplete = u.ProfileComplete, isFounder = u.IsFounder });
 });
 
 // Optional: direct password login.
@@ -121,10 +124,12 @@ app.MapPost("/api/onboard", (OnboardRequest req, HttpRequest http, UserStore sto
     return Results.Ok(new { targets = u.Targets, bmi, bmiCategory = cat, user = u });
 });
 
-app.MapGet("/api/me", (HttpRequest http, UserStore store) =>
+app.MapGet("/api/me", (HttpRequest http, UserStore store, IConfiguration cfg) =>
 {
     var u = Auth(http, store);
     if (u is null) return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    // While Founders mode is open, every active early user is a Founder (free forever).
+    if ((cfg.GetValue<bool?>("FoundersOpen") ?? true) && !u.IsFounder) { u.IsFounder = true; store.Set(u.Email, u); }
     if (!u.ProfileComplete) return Results.Ok(new { user = u, profileComplete = false });
     var (bmi, cat) = NutritionService.CalculateBmi(u.Weight, u.Height);
     return Results.Ok(new { user = u, profileComplete = true, today = UserStore.TodayLog(u), bmi, bmiCategory = cat });

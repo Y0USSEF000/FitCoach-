@@ -24,7 +24,7 @@ export default function Verify() {
       const res = await api.authVerify(email, code.trim());
       if (res.registered && res.token) {
         await signIn(res.token);            // existing account → log in
-        router.replace("/");                // index routes by profile
+        router.replace(res.profileComplete ? "/(tabs)" : "/onboarding");
       } else {
         router.replace({ pathname: "/register", params: { email } }); // new → finish sign-up
       }

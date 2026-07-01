@@ -4,6 +4,15 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProvider } from "@/lib/store";
 import { C } from "@/lib/theme";
 
+// Silence a benign expo-router dev-only message that fires during startup
+// redirects ("The action 'GO_BACK' was not handled"). It never affects the
+// app and never appears in production.
+const _origError = console.error;
+console.error = (...args: any[]) => {
+  if (typeof args[0] === "string" && args[0].includes("GO_BACK")) return;
+  _origError(...args);
+};
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ backgroundColor: C.bg }}>

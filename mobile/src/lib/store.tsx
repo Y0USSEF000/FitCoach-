@@ -26,16 +26,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const token = await getToken();
     if (!token) { setAuthed(false); setHasProfile(false); setLoading(false); return; }
     setAuthed(true);
+    // Start from the last-known profile status so a slow/unreachable server
+    // doesn't wrongly send a returning user to onboarding (iOS symptom).
+    const cached = await AsyncStorage.getItem("hasProfile");
+    if (cached != null) setHasProfile(cached === "1");
     try {
       const me = await api.me();
       if (me?.user) {
-        setHasProfile(!!me.profileComplete);
+        const hp = !!me.profileComplete;
+        setHasProfile(hp);
+        await AsyncStorage.setItem("hasProfile", hp ? "1" : "0");
         if (me.user.lang) setLangState(me.user.lang);
       } else {
+        // 401/404 → token invalid or account missing
         setHasProfile(false);
+        await AsyncStorage.setItem("hasProfile", "0");
       }
     } catch {
-      // backend unreachable — keep authed, assume profile unknown
+      // backend unreachable — keep the cached profile status set above
     } finally {
       setLoading(false);
     }
@@ -49,6 +57,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await clearToken();
+    await AsyncStorage.removeItem("hasProfile");
     setAuthed(false);
     setHasProfile(false);
   };

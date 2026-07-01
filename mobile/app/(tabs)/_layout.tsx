@@ -1,12 +1,15 @@
 import { Tabs } from "expo-router";
 import { View, Text, StyleSheet, Animated, Platform } from "react-native";
 import { useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/lib/store";
 import { t } from "@/lib/i18n";
-import { C, RADIUS, shadow, glow } from "@/lib/theme";
+import { C, RADIUS, shadow } from "@/lib/theme";
 import { LinearGradient } from "expo-linear-gradient";
 
-function TabIcon({ emoji, focused, label }: { emoji: string; focused: boolean; label: string }) {
+type IconName = keyof typeof Ionicons.glyphMap;
+
+function TabIcon({ icon, focused, label }: { icon: IconName; focused: boolean; label: string }) {
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -18,6 +21,8 @@ function TabIcon({ emoji, focused, label }: { emoji: string; focused: boolean; l
     }).start();
   }, [focused]);
 
+  const name = (focused ? icon : `${icon}-outline`) as IconName;
+
   return (
     <View style={s.tabItem} pointerEvents="none">
       <Animated.View style={[s.tabInner, focused && s.tabActive, { transform: [{ scale }] }]}>
@@ -28,7 +33,7 @@ function TabIcon({ emoji, focused, label }: { emoji: string; focused: boolean; l
             style={StyleSheet.absoluteFill}
           />
         )}
-        <Text style={s.emoji}>{emoji}</Text>
+        <Ionicons name={name} size={21} color={focused ? "#fff" : C.faint} />
       </Animated.View>
       <Text style={[s.tabLabel, focused && s.tabLabelActive]}>{label}</Text>
     </View>
@@ -55,7 +60,7 @@ export default function TabsLayout() {
         options={{
           title: t(lang, "dashboard"),
           tabBarShowLabel: false,
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} label={t(lang, "dashboard")} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="home" focused={focused} label={t(lang, "dashboard")} />,
         }}
       />
       <Tabs.Screen
@@ -63,7 +68,7 @@ export default function TabsLayout() {
         options={{
           title: t(lang, "meals"),
           tabBarShowLabel: false,
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🥗" focused={focused} label={t(lang, "meals")} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="restaurant" focused={focused} label={t(lang, "meals")} />,
         }}
       />
       <Tabs.Screen
@@ -71,7 +76,15 @@ export default function TabsLayout() {
         options={{
           title: t(lang, "program"),
           tabBarShowLabel: false,
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} label={t(lang, "program")} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="clipboard" focused={focused} label={t(lang, "program")} />,
+        }}
+      />
+      <Tabs.Screen
+        name="support"
+        options={{
+          title: t(lang, "support"),
+          tabBarShowLabel: false,
+          tabBarIcon: ({ focused }) => <TabIcon icon="heart" focused={focused} label={t(lang, "support")} />,
         }}
       />
       <Tabs.Screen
@@ -79,7 +92,7 @@ export default function TabsLayout() {
         options={{
           title: t(lang, "settings"),
           tabBarShowLabel: false,
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} label={t(lang, "settings")} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="settings" focused={focused} label={t(lang, "settings")} />,
         }}
       />
     </Tabs>
@@ -115,7 +128,6 @@ const s = StyleSheet.create({
   tabActive: {
     opacity: 1,
   },
-  emoji: { fontSize: 22 },
   tabLabel: {
     fontSize: 10,
     fontWeight: "800",

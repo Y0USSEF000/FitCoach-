@@ -29,7 +29,7 @@ const UNIT: Record<string, string> = { height: "cm", weight: "kg", age: "yrs" };
 
 export default function Onboarding() {
   const router = useRouter();
-  const { lang, setLang, refresh } = useApp();
+  const { lang, setLang, refresh, signOut } = useApp();
   const [step, setStep] = useState<Step>("lang");
   const [d, setD] = useState<any>({});
   const [text, setText] = useState("");
@@ -61,10 +61,12 @@ export default function Onboarding() {
     animate("forward", () => { setText(""); setSel(null); setStep(next); });
   };
 
-  const goBack = () => {
+  const goBack = async () => {
     if (autoTimer.current) clearTimeout(autoTimer.current);
     const idx = STEPS.indexOf(step as any);
-    if (idx <= 0) { router.back(); return; }
+    // On the first step there's nothing to go back to (we arrived here via a
+    // redirect), so log out and return to the welcome / email screen.
+    if (idx <= 0) { await signOut(); router.replace("/welcome"); return; }
     animate("back", () => { setText(""); setSel(null); setStep(STEPS[idx - 1]); });
   };
 

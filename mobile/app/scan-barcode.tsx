@@ -16,17 +16,25 @@ export default function ScanBarcode() {
 
   const onScan = async ({ data }: { data: string }) => {
     if (locked.current || busy) return;
+    // Product barcodes are digits only. QR codes / links won't be found.
+    const code = (data || "").replace(/\D/g, "");
+    if (code.length < 8) {
+      locked.current = true;
+      setError("That's not a product barcode. Point at the striped barcode (with numbers under it), or use Search by name.");
+      return;
+    }
     locked.current = true;
     setBusy(true);
     setError("");
     try {
-      const out = await api.scanBarcode(data);
+      const out = await api.scanBarcode(code);
       setResult(out.result);
     } catch (err: any) {
-      const d = err?.message ?? "";
+      const d = err?.body?.error || err?.message || "";
       setError(d.includes("product_not_found")
         ? "Product not found in the database. Try Search by name instead."
-        : d.includes("no_profile") ? "Please complete your profile first." : "Scan failed. Try again.");
+        : d.includes("no_profile") ? "Please complete your profile first."
+        : "Couldn't reach the server. Check your Wi-Fi and that the backend is running.");
     } finally { setBusy(false); }
   };
 
@@ -47,7 +55,7 @@ export default function ScanBarcode() {
       {!result && (
         <CameraView
           style={StyleSheet.absoluteFill}
-          barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "qr", "code128"] }}
+          barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
           onBarcodeScanned={onScan}
         />
       )}
@@ -63,7 +71,7 @@ export default function ScanBarcode() {
       {!result && (
         <View style={s.center}>
           <View style={s.frame} />
-          <Text style={s.hint}>{busy ? "Looking up product…" : "Point at the barcode"}</Text>
+          <Text style={s.hint}>{busy ? "Looking up product…" : "Point at the product barcode (striped lines)"}</Text>
           {error ? <Text style={s.err}>{error}</Text> : null}
           {error ? (
             <DuoButton label="Scan again" icon="↻" onPress={scanAgain} style={{ width: 220 }} />

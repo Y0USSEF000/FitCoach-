@@ -39,6 +39,8 @@ public class User
     public string PasswordSalt { get; set; } = "";
     public bool Verified { get; set; }
     public string Token { get; set; } = "";
+    // Early adopters — the app stays free for them forever.
+    public bool IsFounder { get; set; }
 
     // ── Profile ──
     public string Lang { get; set; } = "en";
